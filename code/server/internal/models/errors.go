@@ -4,7 +4,6 @@ import "errors"
 
 // Validation errors
 var (
-	ErrParentNameRequired  = errors.New("parent name is required")
 	ErrParentNameTooLong   = errors.New("parent name must be less than 100 characters")
 	ErrPairingCodeRequired = errors.New("pairing code is required")
 	ErrInvalidPairingCode  = errors.New("pairing code must be 8 characters")
@@ -12,8 +11,10 @@ var (
 	ErrChildNameTooLong    = errors.New("child name must be less than 100 characters")
 	ErrSourceURLRequired   = errors.New("source url is required")
 	ErrSourceURLTooLong    = errors.New("source url must be less than 2048 characters")
-	ErrChildIDsRequired    = errors.New("child ids are required")
 	ErrInvalidChildID      = errors.New("invalid child id")
+	ErrLinkUnsupported     = errors.New("link source is not supported")
+	ErrInvalidToken        = errors.New("invalid or expired token")
+	ErrUsageExceeded       = errors.New("daily usage limit exceeded")
 )
 
 // Business errors

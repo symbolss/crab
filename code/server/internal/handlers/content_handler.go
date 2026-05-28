@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/family/crab-server/internal/models"
 	"github.com/family/crab-server/internal/services"
 	"github.com/family/crab-server/pkg/response"
@@ -102,4 +104,131 @@ func parseUUID(s string) *[16]byte {
 		}
 	}
 	return &uuid
+}
+
+// GetItems handles GET /api/items
+// Returns all items for the authenticated family
+func (h *ContentHandler) GetItems(w http.ResponseWriter, r *http.Request) {
+	// Get family ID from context
+	familyID, ok := r.Context().Value("familyId").(string)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "family id not found in context")
+		return
+	}
+
+	familyUUID, err := uuid.Parse(familyID)
+	if err != nil {
+		response.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid family id")
+		return
+	}
+
+	// Get items
+	items, err := h.contentService.GetItemsByFamily(r.Context(), familyUUID)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get items")
+		return
+	}
+
+	response.OK(w, items)
+}
+
+// GetItem handles GET /api/items/{id}
+// Returns a single item by ID
+func (h *ContentHandler) GetItem(w http.ResponseWriter, r *http.Request) {
+	itemIDStr := chi.URLParam(r, "id")
+	itemID, err := uuid.Parse(itemIDStr)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "INVALID_ID", "invalid item id")
+		return
+	}
+
+	// Get family ID from context for authorization
+	familyID, ok := r.Context().Value("familyId").(string)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "family id not found")
+		return
+	}
+
+	familyUUID, err := uuid.Parse(familyID)
+	if err != nil {
+		response.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid family id")
+		return
+	}
+
+	// Get item
+	item, err := h.contentService.GetItemByID(r.Context(), itemID, familyUUID)
+	if err != nil {
+		switch err {
+		case models.ErrItemNotFound:
+			response.Error(w, http.StatusNotFound, "NOT_FOUND", "item not found")
+		case models.ErrUnauthorized:
+			response.Error(w, http.StatusForbidden, "FORBIDDEN", "access denied")
+		default:
+			response.Error(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get item")
+		}
+		return
+	}
+
+	response.OK(w, item)
+}
+
+// GetPlayback handles GET /api/items/{id}/playback
+// Returns playback configuration for an item
+func (h *ContentHandler) GetPlayback(w http.ResponseWriter, r *http.Request) {
+	itemIDStr := chi.URLParam(r, "id")
+	itemID, err := uuid.Parse(itemIDStr)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "INVALID_ID", "invalid item id")
+		return
+	}
+
+	// Get family ID from context
+	familyID, ok := r.Context().Value("familyId").(string)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "family id not found")
+		return
+	}
+
+	familyUUID, err := uuid.Parse(familyID)
+	if err != nil {
+		response.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid family id")
+		return
+	}
+
+	// Get playback config
+	config, err := h.contentService.GetPlaybackConfig(r.Context(), itemID, familyUUID)
+	if err != nil {
+		switch err {
+		case models.ErrItemNotFound:
+			response.Error(w, http.StatusNotFound, "NOT_FOUND", "item not found")
+		case models.ErrUnauthorized:
+			response.Error(w, http.StatusForbidden, "FORBIDDEN", "access denied")
+		default:
+			response.Error(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get playback config")
+		}
+		return
+	}
+
+	response.OK(w, config)
+}
+
+// PlaybackConfigResponse represents the playback configuration response
+type PlaybackConfigResponse struct {
+	ItemID        uuid.UUID       `json:"itemId"`
+	PlaybackMode  string          `json:"playbackMode"`
+	Asset         *PlaybackAsset  `json:"asset,omitempty"`
+	WebViewPolicy *WebViewPolicy  `json:"webviewPolicy,omitempty"`
+}
+
+// PlaybackAsset represents a playback asset
+type PlaybackAsset struct {
+	Kind string `json:"kind"`
+	URL  string `json:"url"`
+}
+
+// WebViewPolicy represents WebView security policy
+type WebViewPolicy struct {
+	AllowDomains       []string `json:"allowDomains"`
+	BlockExternalScheme bool    `json:"blockExternalScheme"`
+	BlockNewWindow      bool    `json:"blockNewWindow"`
 }

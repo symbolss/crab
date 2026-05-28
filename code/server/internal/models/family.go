@@ -16,16 +16,20 @@ type Family struct {
 
 // Child represents a child account linked to a family
 type Child struct {
-	ID        uuid.UUID `json:"id"`
-	FamilyID  uuid.UUID `json:"familyId"`
-	Name      string    `json:"name"`
-	Status    string    `json:"status"` // active, inactive
-	CreatedAt time.Time `json:"createdAt"`
+	ID               uuid.UUID `json:"id"`
+	FamilyID         uuid.UUID `json:"familyId"`
+	Name             string    `json:"name"`
+	AvatarURL        string    `json:"avatarUrl,omitempty"`
+	DeviceID         string    `json:"deviceId,omitempty"`
+	DailyTimeLimitSec int      `json:"dailyTimeLimitSec"` // Daily time limit in seconds, default 3600
+	Status           string    `json:"status"`            // active, inactive
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 // CreateFamilyRequest represents the request body for creating a family
 type CreateFamilyRequest struct {
-	ParentName string `json:"parentName"`
+	// ParentName is optional, used for display purposes
+	ParentName string `json:"parentName,omitempty"`
 }
 
 // CreateFamilyResponse represents the response for creating a family
@@ -39,6 +43,7 @@ type CreateFamilyResponse struct {
 type PairChildRequest struct {
 	PairingCode string `json:"pairingCode"`
 	ChildName   string `json:"childName"`
+	DeviceID    string `json:"deviceId,omitempty"` // Optional device identifier
 }
 
 // PairChildResponse represents the response for pairing a child
@@ -51,17 +56,17 @@ type PairChildResponse struct {
 
 // ChildListResponse represents a child in the list response
 type ChildListResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID               uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	AvatarURL        string    `json:"avatarUrl,omitempty"`
+	DeviceID         string    `json:"deviceId,omitempty"`
+	DailyTimeLimitSec int      `json:"dailyTimeLimitSec"`
+	Status           string    `json:"status"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
-// Validate validates the CreateFamilyRequest
+// Validate validates the CreateFamilyRequest - ParentName is optional
 func (r *CreateFamilyRequest) Validate() error {
-	if r.ParentName == "" {
-		return ErrParentNameRequired
-	}
 	if len(r.ParentName) > 100 {
 		return ErrParentNameTooLong
 	}

@@ -35,6 +35,15 @@ const (
 	PlaybackModeAudio        PlaybackMode = "audio"
 )
 
+// PlaybackStatus represents whether the content can be played
+type PlaybackStatus string
+
+const (
+	PlaybackStatusUnknown         PlaybackStatus = "unknown"
+	PlaybackStatusPlayable        PlaybackStatus = "playable"
+	PlaybackStatusFallbackRequired PlaybackStatus = "fallback_required"
+)
+
 // Item represents a content item in the system
 // Items are shared at family level - all children in the family can see them
 type Item struct {
@@ -48,6 +57,9 @@ type Item struct {
 	Summary          string           `json:"summary,omitempty"`
 	PlaybackMode     PlaybackMode     `json:"playbackMode"`
 	ProcessingStatus ProcessingStatus `json:"processingStatus"`
+	PlaybackStatus   PlaybackStatus   `json:"playbackStatus"`
+	AgeBand          string           `json:"ageBand,omitempty"`     // Target age range
+	DurationSec      int              `json:"durationSec,omitempty"` // Content duration in seconds
 	CreatedAt        time.Time        `json:"createdAt"`
 	UpdatedAt        time.Time        `json:"updatedAt"`
 }
@@ -74,4 +86,19 @@ func (r *ImportItemRequest) Validate() error {
 		return ErrSourceURLTooLong
 	}
 	return nil
+}
+
+// PlayEvent represents a play event from the child app
+type PlayEvent struct {
+	ItemID      uuid.UUID `json:"itemId"`
+	EventType   string    `json:"eventType"`
+	PositionSec int       `json:"positionSec"`
+	OccurredAt  time.Time `json:"occurredAt"`
+}
+
+// DailyUsage represents daily usage data for a child
+type DailyUsage struct {
+	ChildID      uuid.UUID `json:"childId"`
+	Date         time.Time `json:"date"`         // Date only (YYYY-MM-DD)
+	TotalPlaySec int       `json:"totalPlaySec"` // Total play time in seconds
 }
