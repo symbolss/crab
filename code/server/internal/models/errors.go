@@ -10,6 +10,10 @@ var (
 	ErrInvalidPairingCode  = errors.New("pairing code must be 8 characters")
 	ErrChildNameRequired   = errors.New("child name is required")
 	ErrChildNameTooLong    = errors.New("child name must be less than 100 characters")
+	ErrSourceURLRequired   = errors.New("source url is required")
+	ErrSourceURLTooLong    = errors.New("source url must be less than 2048 characters")
+	ErrChildIDsRequired    = errors.New("child ids are required")
+	ErrInvalidChildID      = errors.New("invalid child id")
 )
 
 // Business errors
@@ -19,4 +23,7 @@ var (
 	ErrPairingCodeExpired      = errors.New("pairing code has expired")
 	ErrChildNotFound           = errors.New("child not found")
 	ErrUnauthorized            = errors.New("unauthorized access")
+	ErrItemNotFound            = errors.New("item not found")
+	ErrDuplicateURL            = errors.New("content with this url already exists")
+	ErrChildNotInFamily        = errors.New("child does not belong to this family")
 )

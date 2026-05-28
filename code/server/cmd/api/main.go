@@ -37,12 +37,15 @@ func main() {
 	// Initialize repositories (using in-memory for now)
 	familyRepo := memrepo.NewInMemoryFamilyRepository()
 	childRepo := memrepo.NewInMemoryChildRepository()
+	itemRepo := memrepo.NewInMemoryItemRepository()
 
 	// Initialize services
 	familySvc := services.NewFamilyService(familyRepo, childRepo, jwtSecret)
+	contentSvc := services.NewContentService(familyRepo, itemRepo)
 
 	// Initialize handlers
 	familyHandler := handlers.NewFamilyHandler(familySvc)
+	contentHandler := handlers.NewContentHandler(contentSvc, familySvc)
 
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(familySvc)
@@ -72,6 +75,8 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth)
 		r.Get("/api/children", familyHandler.GetChildren)
+		r.Post("/api/items/import", contentHandler.ImportItem)
+		r.Post("/api/items/{id}/assign", contentHandler.AssignItem)
 	})
 
 	// Start server

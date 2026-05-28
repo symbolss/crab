@@ -183,3 +183,221 @@ func (r *InMemoryChildRepository) UpdateChildStatus(ctx context.Context, id uuid
 	child.Status = status
 	return nil
 }
+
+// InMemoryItemRepository is an in-memory implementation of ItemRepository for testing
+type InMemoryItemRepository struct {
+	mu                sync.RWMutex
+	items             map[uuid.UUID]*models.Item
+	byFamily          map[uuid.UUID][]*models.Item
+	byNormalizedURL   map[string]*models.Item // key: familyID:normalizedURL
+	assignments       map[uuid.UUID]*models.Assignment
+	assignmentsByItem map[uuid.UUID][]*models.Assignment
+	assignmentsByChild map[uuid.UUID][]*models.Assignment
+}
+
+// NewInMemoryItemRepository creates a new in-memory item repository
+func NewInMemoryItemRepository() *InMemoryItemRepository {
+	return &InMemoryItemRepository{
+		items:              make(map[uuid.UUID]*models.Item),
+		byFamily:           make(map[uuid.UUID][]*models.Item),
+		byNormalizedURL:    make(map[string]*models.Item),
+		assignments:        make(map[uuid.UUID]*models.Assignment),
+		assignmentsByItem:  make(map[uuid.UUID][]*models.Assignment),
+		assignmentsByChild: make(map[uuid.UUID][]*models.Assignment),
+	}
+}
+
+// CreateItem creates a new item
+func (r *InMemoryItemRepository) CreateItem(ctx context.Context, item *models.Item) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Store a copy
+	i := &models.Item{
+		ID:               item.ID,
+		FamilyID:         item.FamilyID,
+		SourceType:       item.SourceType,
+		SourceURL:        item.SourceURL,
+		NormalizedURL:    item.NormalizedURL,
+		Title:            item.Title,
+		CoverURL:         item.CoverURL,
+		Summary:          item.Summary,
+		PlaybackMode:     item.PlaybackMode,
+		ProcessingStatus: item.ProcessingStatus,
+		CreatedAt:        item.CreatedAt,
+		UpdatedAt:        item.UpdatedAt,
+	}
+	r.items[i.ID] = i
+	r.byFamily[i.FamilyID] = append(r.byFamily[i.FamilyID], i)
+	r.byNormalizedURL[i.FamilyID.String()+":"+i.NormalizedURL] = i
+	return nil
+}
+
+// GetItemByID retrieves an item by ID
+func (r *InMemoryItemRepository) GetItemByID(ctx context.Context, id uuid.UUID) (*models.Item, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	item, ok := r.items[id]
+	if !ok {
+		return nil, nil
+	}
+
+	return &models.Item{
+		ID:               item.ID,
+		FamilyID:         item.FamilyID,
+		SourceType:       item.SourceType,
+		SourceURL:        item.SourceURL,
+		NormalizedURL:    item.NormalizedURL,
+		Title:            item.Title,
+		CoverURL:         item.CoverURL,
+		Summary:          item.Summary,
+		PlaybackMode:     item.PlaybackMode,
+		ProcessingStatus: item.ProcessingStatus,
+		CreatedAt:        item.CreatedAt,
+		UpdatedAt:        item.UpdatedAt,
+	}, nil
+}
+
+// GetItemByNormalizedURL retrieves an item by normalized URL within a family
+func (r *InMemoryItemRepository) GetItemByNormalizedURL(ctx context.Context, familyID uuid.UUID, normalizedURL string) (*models.Item, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	item, ok := r.byNormalizedURL[familyID.String()+":"+normalizedURL]
+	if !ok {
+		return nil, nil
+	}
+
+	return &models.Item{
+		ID:               item.ID,
+		FamilyID:         item.FamilyID,
+		SourceType:       item.SourceType,
+		SourceURL:        item.SourceURL,
+		NormalizedURL:    item.NormalizedURL,
+		Title:            item.Title,
+		CoverURL:         item.CoverURL,
+		Summary:          item.Summary,
+		PlaybackMode:     item.PlaybackMode,
+		ProcessingStatus: item.ProcessingStatus,
+		CreatedAt:        item.CreatedAt,
+		UpdatedAt:        item.UpdatedAt,
+	}, nil
+}
+
+// GetItemsByFamilyID retrieves all items for a family
+func (r *InMemoryItemRepository) GetItemsByFamilyID(ctx context.Context, familyID uuid.UUID) ([]*models.Item, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	items := r.byFamily[familyID]
+	result := make([]*models.Item, len(items))
+	for i, item := range items {
+		result[i] = &models.Item{
+			ID:               item.ID,
+			FamilyID:         item.FamilyID,
+			SourceType:       item.SourceType,
+			SourceURL:        item.SourceURL,
+			NormalizedURL:    item.NormalizedURL,
+			Title:            item.Title,
+			CoverURL:         item.CoverURL,
+			Summary:          item.Summary,
+			PlaybackMode:     item.PlaybackMode,
+			ProcessingStatus: item.ProcessingStatus,
+			CreatedAt:        item.CreatedAt,
+			UpdatedAt:        item.UpdatedAt,
+		}
+	}
+	return result, nil
+}
+
+// UpdateItem updates an item
+func (r *InMemoryItemRepository) UpdateItem(ctx context.Context, item *models.Item) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	existing, ok := r.items[item.ID]
+	if !ok {
+		return models.ErrItemNotFound
+	}
+
+	existing.Title = item.Title
+	existing.CoverURL = item.CoverURL
+	existing.Summary = item.Summary
+	existing.ProcessingStatus = item.ProcessingStatus
+	existing.UpdatedAt = item.UpdatedAt
+	return nil
+}
+
+// CreateAssignment creates a new assignment
+func (r *InMemoryItemRepository) CreateAssignment(ctx context.Context, assignment *models.Assignment) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a := &models.Assignment{
+		ID:         assignment.ID,
+		ItemID:     assignment.ItemID,
+		ChildID:    assignment.ChildID,
+		AssignedBy: assignment.AssignedBy,
+		AssignedAt: assignment.AssignedAt,
+		State:      assignment.State,
+	}
+	r.assignments[a.ID] = a
+	r.assignmentsByItem[a.ItemID] = append(r.assignmentsByItem[a.ItemID], a)
+	r.assignmentsByChild[a.ChildID] = append(r.assignmentsByChild[a.ChildID], a)
+	return nil
+}
+
+// GetAssignmentsByItemID retrieves all assignments for an item
+func (r *InMemoryItemRepository) GetAssignmentsByItemID(ctx context.Context, itemID uuid.UUID) ([]*models.Assignment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	assignments := r.assignmentsByItem[itemID]
+	result := make([]*models.Assignment, len(assignments))
+	for i, a := range assignments {
+		result[i] = &models.Assignment{
+			ID:         a.ID,
+			ItemID:     a.ItemID,
+			ChildID:    a.ChildID,
+			AssignedBy: a.AssignedBy,
+			AssignedAt: a.AssignedAt,
+			State:      a.State,
+		}
+	}
+	return result, nil
+}
+
+// GetAssignmentsByChildID retrieves all assignments for a child
+func (r *InMemoryItemRepository) GetAssignmentsByChildID(ctx context.Context, childID uuid.UUID) ([]*models.Assignment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	assignments := r.assignmentsByChild[childID]
+	result := make([]*models.Assignment, len(assignments))
+	for i, a := range assignments {
+		result[i] = &models.Assignment{
+			ID:         a.ID,
+			ItemID:     a.ItemID,
+			ChildID:    a.ChildID,
+			AssignedBy: a.AssignedBy,
+			AssignedAt: a.AssignedAt,
+			State:      a.State,
+		}
+	}
+	return result, nil
+}
+
+// UpdateAssignmentState updates the state of an assignment
+func (r *InMemoryItemRepository) UpdateAssignmentState(ctx context.Context, id uuid.UUID, state string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	assignment, ok := r.assignments[id]
+	if !ok {
+		return nil
+	}
+
+	assignment.State = state
+	return nil
+}
