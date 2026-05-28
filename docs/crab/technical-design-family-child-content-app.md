@@ -181,21 +181,7 @@ MVP 先只保留 5 个核心对象：
 - `status`：`active | inactive`
 - `createdAt`
 
-### 6.4 Assignment
-关键字段：
-- `id`
-- `itemId`
-- `childId`
-- `assignedBy`
-- `assignedAt`
-- `state`：`active | revoked | expired`
-
-`state` 说明：
-- `active`：内容对孩子可见
-- `revoked`：家长主动撤回，孩子端不再显示
-- `expired`：超过设定天数孩子未查看，自动标记（MVP 可暂不启用自动过期）
-
-### 6.5 PlaybackAsset
+### 6.4 PlaybackAsset
 关键字段：
 - `id`
 - `itemId`
@@ -203,6 +189,8 @@ MVP 先只保留 5 个核心对象：
 - `url`
 - `status`
 - `createdAt`
+
+**设计说明**：内容直接关联 Family，家庭内所有孩子可见，无需显式分配。这简化了分享流程。
 
 时间字段统一使用 **ISO 8601 UTC**，例如：`2026-05-26T14:30:00Z`
 
@@ -245,15 +233,7 @@ MVP 先只保留 5 个核心对象：
 - `status`
 - `created_at`
 
-### 7.5 `assignments`
-- `id`
-- `item_id`
-- `child_id`
-- `assigned_by`
-- `assigned_at`
-- `state`
-
-### 7.6 `playback_assets`
+### 7.5 `playback_assets`
 - `id`
 - `item_id`
 - `kind`
@@ -262,7 +242,7 @@ MVP 先只保留 5 个核心对象：
 - `meta_json`
 - `created_at`
 
-### 7.7 `play_events`
+### 7.6 `play_events`
 - `id`
 - `child_id`
 - `item_id`
@@ -278,7 +258,7 @@ MVP 先只保留 5 个核心对象：
 - `complete`
 - `favorite`
 
-### 7.8 `daily_usage`
+### 7.7 `daily_usage`
 - `id`
 - `child_id`
 - `date`
@@ -295,8 +275,7 @@ MVP 先只保留 5 个核心对象：
 - 监听剪贴板，识别抖音/X/视频号等链接并提供快速导入提示
 - 手动粘贴链接输入框
 - 展示最小预览
-- 选择孩子
-- 点击发送
+- 点击发送（自动分享给家庭，所有孩子可见）
 
 不做：
 - 内容列表页
@@ -308,7 +287,7 @@ MVP 先只保留 5 个核心对象：
 首期只保留两个核心页面：
 
 #### 8.2.1 Feed 页
-- 拉取已分配内容（仅 `state = active`）
+- 拉取家庭内容（按 familyId 查询 items）
 - 按最近投喂时间排序
 - 展示封面、标题
 - 显示当日剩余可用时长
@@ -336,23 +315,17 @@ MVP 暂不做：
 - 创建 `Item`
 - 投递异步处理任务
 
-### 9.2 AssignmentModule
-- 把内容分配给孩子
-- 支持撤回（`state = revoked`）
-- 支持重新上线（`state = active`）
-- 查询孩子 feed（过滤 `state = active`）
-
-### 9.3 PlaybackModule
+### 9.2 PlaybackModule
 - 返回当前最佳播放方式
 - 返回播放资源 URL
 - 返回 WebView 安全策略参数
 - 播放前校验每日时长余额
 
-### 9.4 EventModule
+### 9.3 EventModule
 - 记录打开、开始播放、完成等基础事件
 - 记录每日使用时长累计
 
-### 9.5 WorkerModule
+### 9.4 WorkerModule
 - 元信息抓取
 - 可播放性探测
 - 私有视频兜底处理
@@ -538,34 +511,6 @@ MVP 首期重点覆盖抖音、X、微信视频号和普通网页，其中抖音
 ### `GET /api/items/:id`
 返回内容详情、处理状态、播放资源。
 
-### `POST /api/items/:id/assign`
-请求：
-```json
-{
-  "childIds": ["child_1", "child_2"]
-}
-```
-
-### `POST /api/items/:id/revoke`
-撤回已分配内容。
-
-请求：
-```json
-{
-  "childIds": ["child_1"]
-}
-```
-
-### `POST /api/items/:id/reassign`
-将被撤回的内容重新上线。
-
-请求：
-```json
-{
-  "childIds": ["child_1"]
-}
-```
-
 ### `PATCH /api/children/:id/settings`
 家长设置孩子控制参数。
 
@@ -592,8 +537,8 @@ MVP 首期重点覆盖抖音、X、微信视频号和普通网页，其中抖音
 
 ## 12.3 孩子端业务接口
 
-### `GET /api/children/:id/feed`
-返回该孩子可见内容列表（仅 `state = active` 的 Assignment）。
+### `GET /api/items`
+返回该家庭可见内容列表（按 familyId 查询）。
 
 ### `GET /api/items/:id/playback`
 响应示例：
@@ -647,12 +592,6 @@ MVP 首期重点覆盖抖音、X、微信视频号和普通网页，其中抖音
 - `ready`
 - `failed`
 
-## 13.4 Assignment 状态
-- `active` → `revoked`（家长撤回）
-- `revoked` → `active`（家长重新上线）
-- `active` → `expired`（长期未查看，MVP 暂不启用）
-- `expired` → `active`（家长重新上线）
-
 ## 14. 安全与约束
 
 ### 14.1 身份认证
@@ -673,7 +612,7 @@ MVP 首期重点覆盖抖音、X、微信视频号和普通网页，其中抖音
 - 禁止文件协议和不必要能力
 
 ### 14.4 孩子身份隔离
-- 孩子端只读取已分配内容
+- 孩子端只读取自己家庭的内容
 - 孩子端 API 只能访问自己的 play-events 和 usage
 - 不暴露家长管理能力
 - 孩子端不能修改自己的控制参数
@@ -706,7 +645,6 @@ MVP 首期重点覆盖抖音、X、微信视频号和普通网页，其中抖音
 | `LINK_UNSUPPORTED` | 链接来源不在支持范围内 |
 | `LINK_RESOLVE_FAILED` | 链接解析失败 |
 | `INVALID_PAIRING_CODE` | 配对码无效 |
-| `ITEM_ALREADY_ASSIGNED` | 内容已分配给该孩子 |
 
 ## 16. 部署方案（MVP）
 MVP 阶段推荐 Docker Compose 单机部署：
@@ -741,13 +679,12 @@ services:
 
 ### 单元测试
 - 后端核心 logic 层覆盖率目标 > 70%
-- 重点覆盖：URL 标准化与去重、来源类型识别、时长计算、Assignment 状态流转
+- 重点覆盖：URL 标准化与去重、来源类型识别、时长计算
 
 ### 集成测试
 - 关键链路端到端验证：
-  1. 创建家庭 → 配对孩子 → 导入内容 → 分配 → 孩子拉取 feed → 播放 → 上报事件
-  2. 撤回 → 孩子 feed 不再出现
-  3. 时长超限 → 播放被拒绝
+  1. 创建家庭 → 配对孩子 → 导入内容 → 孩子拉取 feed → 播放 → 上报事件
+  2. 时长超限 → 播放被拒绝
 
 ### 孩子端测试
 - WebView 导航拦截测试（模拟各类跳转场景）
@@ -769,8 +706,8 @@ services:
 ## 19. MVP 实施顺序
 
 ### Phase 1：后端最小骨架
-- 建 `families / items / children / assignments / playback_assets / play_events / daily_usage` 表
-- `family/create + pair + import + assign + feed + playback + revoke + usage` 核心接口
+- 建 `families / items / children / playback_assets / play_events / daily_usage` 表
+- `family/create + pair + import + feed + playback + usage` 核心接口
 - JWT 鉴权中间件
 - Redis 队列框架
 

@@ -23,7 +23,7 @@
 ## 4. 里程碑
 
 ### Milestone 1：后端最小骨架可用
-完成后，系统可以接收分享链接、建内容记录、分配给孩子、返回 feed 与播放配置。
+完成后，系统可以接收分享链接、建内容记录、返回 feed 与播放配置。
 
 ### Milestone 2：家长端分享壳可用
 完成后，家长可以从系统分享面板打开分享壳，看到最小预览并把内容发送给孩子。
@@ -169,7 +169,6 @@
 - 插入 1 个测试家庭，配对码如 `TEST01`
 - 插入 1~2 个测试孩子账号
 - 准备 3~5 条测试 Item 数据（包含不同 source_type）
-- 准备测试 Assignment 数据
 
 **验收标准**
 - 本地环境可直接看到 feed 数据
@@ -263,43 +262,25 @@
 
 ---
 
-#### T9. 实现分配接口 POST /api/items/:id/assign
+#### T9. 实现家庭 feed 接口 GET /api/items
 **风险等级**: 🟢 低风险
 
-**接口**: `POST /api/items/:id/assign`
+**接口**: `GET /api/items`
 
 **内容**
-- 接收 childIds 数组
-- 创建 assignment 记录（state: active）
-- 支持一个 Item 分配给多个孩子
-- 重复分配不会产生脏数据（检查已存在且 state=active 的记录）
-
-**验收标准**
-- 能成功分配给指定孩子
-- 重复分配不会产生脏数据
-- 分配不存在的孩子返回错误
-
----
-
-#### T10. 实现孩子 feed 接口 GET /api/children/:id/feed
-**风险等级**: 🟢 低风险
-
-**接口**: `GET /api/children/:id/feed`
-
-**内容**
-- 查询该孩子可见内容（仅 state=active 的 assignment）
+- 查询该家庭可见内容（按 familyId 查询 items）
 - 只返回 items.processing_status = ready 的内容
 - 返回 Item 基础信息（id, title, cover_url, source_type, playback_mode）
-- 按 assignments.assigned_at 倒序排序
+- 按 created_at 倒序排序
 
 **验收标准**
-- 返回结果只包含已分配且状态为 ready 的内容
+- 返回结果只包含状态为 ready 的内容
 - 排序符合预期（最新投喂在前）
-- 孩子只能看到自己的 feed
+- 家庭内所有孩子可见
 
 ---
 
-#### T11. 实现播放配置接口 GET /api/items/:id/playback
+#### T10. 实现播放配置接口 GET /api/items/:id/playback
 **风险等级**: 🟢 低风险
 
 **接口**: `GET /api/items/:id/playback`
