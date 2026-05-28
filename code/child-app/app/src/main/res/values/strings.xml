@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Crab Child</string>
+    
+    <!-- Pairing Screen -->
+    <string name="pairing_title">Pair Your Device</string>
+    <string name="pairing_subtitle">Enter the code shown on your parent\'s device</string>
+    <string name="pairing_code_hint">Pairing Code</string>
+    <string name="pair_device">Pair Device</string>
+    
+    <!-- Content Screen -->
+    <string name="content_title">My Videos</string>
+</resources>
