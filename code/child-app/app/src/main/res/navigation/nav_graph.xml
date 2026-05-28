@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/pairingFragment">
+
+    <fragment
+        android:id="@+id/pairingFragment"
+        android:name="com.family.crab.child.ui.pairing.PairingFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/fragment_pairing">
+        <action
+            android:id="@+id/action_pairing_to_content"
+            app:destination="@id/contentFragment"
+            app:popUpTo="@id/pairingFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/contentFragment"
+        android:name="com.family.crab.child.ui.content.ContentFragment"
+        android:label="@string/content_title"
+        tools:layout="@layout/fragment_content" />
+
+</navigation>
