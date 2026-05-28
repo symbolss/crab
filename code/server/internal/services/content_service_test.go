@@ -196,7 +196,7 @@ func TestContentService_ImportItem_Duplicate(t *testing.T) {
 	}
 }
 
-func TestContentService_AssignItem(t *testing.T) {
+func TestContentService_GetItemsByFamily(t *testing.T) {
 	ctx := context.Background()
 	familyRepo := memrepo.NewInMemoryFamilyRepository()
 	itemRepo := memrepo.NewInMemoryItemRepository()
@@ -209,58 +209,20 @@ func TestContentService_AssignItem(t *testing.T) {
 	}
 	_ = familyRepo.CreateFamily(ctx, family)
 
-	// Create test item
-	item := &models.Item{
-		ID:               uuid.New(),
-		FamilyID:         family.ID,
-		SourceType:       models.SourceTypeDouyin,
-		SourceURL:        "https://example.com",
-		NormalizedURL:    "https://example.com",
-		ProcessingStatus: models.ProcessingStatusReady,
-	}
-	_ = itemRepo.CreateItem(ctx, item)
-
-	childID := uuid.New()
-	parentID := uuid.New()
-
-	tests := []struct {
-		name    string
-		itemID  uuid.UUID
-		req     *models.AssignItemRequest
-		wantErr bool
-	}{
-		{
-			name:    "valid assignment",
-			itemID:  item.ID,
-			req:     &models.AssignItemRequest{ChildIDs: []uuid.UUID{childID}},
-			wantErr: false,
-		},
-		{
-			name:    "empty child IDs",
-			itemID:  item.ID,
-			req:     &models.AssignItemRequest{ChildIDs: []uuid.UUID{}},
-			wantErr: true,
-		},
-		{
-			name:    "non-existent item",
-			itemID:  uuid.New(),
-			req:     &models.AssignItemRequest{ChildIDs: []uuid.UUID{childID}},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.AssignItem(ctx, family.ID, tt.itemID, parentID, tt.req)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("AssignItem() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if len(got.AssignedTo) != len(tt.req.ChildIDs) {
-					t.Errorf("AssignItem() assigned %d children, want %d", len(got.AssignedTo), len(tt.req.ChildIDs))
-				}
-			}
+	// Import items
+	for i := 0; i < 3; i++ {
+		_, _ = service.ImportItem(ctx, family.ID, &models.ImportItemRequest{
+			SourceURL: "https://example.com/video/" + string(rune('a'+i)),
 		})
+	}
+
+	// Get items
+	items, err := service.GetItemsByFamily(ctx, family.ID)
+	if err != nil {
+		t.Fatalf("GetItemsByFamily failed: %v", err)
+	}
+
+	if len(items) != 3 {
+		t.Errorf("GetItemsByFamily returned %d items, want 3", len(items))
 	}
 }

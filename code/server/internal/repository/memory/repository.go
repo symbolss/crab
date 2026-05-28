@@ -186,24 +186,18 @@ func (r *InMemoryChildRepository) UpdateChildStatus(ctx context.Context, id uuid
 
 // InMemoryItemRepository is an in-memory implementation of ItemRepository for testing
 type InMemoryItemRepository struct {
-	mu                sync.RWMutex
-	items             map[uuid.UUID]*models.Item
-	byFamily          map[uuid.UUID][]*models.Item
-	byNormalizedURL   map[string]*models.Item // key: familyID:normalizedURL
-	assignments       map[uuid.UUID]*models.Assignment
-	assignmentsByItem map[uuid.UUID][]*models.Assignment
-	assignmentsByChild map[uuid.UUID][]*models.Assignment
+	mu              sync.RWMutex
+	items           map[uuid.UUID]*models.Item
+	byFamily        map[uuid.UUID][]*models.Item
+	byNormalizedURL map[string]*models.Item // key: familyID:normalizedURL
 }
 
 // NewInMemoryItemRepository creates a new in-memory item repository
 func NewInMemoryItemRepository() *InMemoryItemRepository {
 	return &InMemoryItemRepository{
-		items:              make(map[uuid.UUID]*models.Item),
-		byFamily:           make(map[uuid.UUID][]*models.Item),
-		byNormalizedURL:    make(map[string]*models.Item),
-		assignments:        make(map[uuid.UUID]*models.Assignment),
-		assignmentsByItem:  make(map[uuid.UUID][]*models.Assignment),
-		assignmentsByChild: make(map[uuid.UUID][]*models.Assignment),
+		items:           make(map[uuid.UUID]*models.Item),
+		byFamily:        make(map[uuid.UUID][]*models.Item),
+		byNormalizedURL: make(map[string]*models.Item),
 	}
 }
 
@@ -326,78 +320,5 @@ func (r *InMemoryItemRepository) UpdateItem(ctx context.Context, item *models.It
 	existing.Summary = item.Summary
 	existing.ProcessingStatus = item.ProcessingStatus
 	existing.UpdatedAt = item.UpdatedAt
-	return nil
-}
-
-// CreateAssignment creates a new assignment
-func (r *InMemoryItemRepository) CreateAssignment(ctx context.Context, assignment *models.Assignment) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	a := &models.Assignment{
-		ID:         assignment.ID,
-		ItemID:     assignment.ItemID,
-		ChildID:    assignment.ChildID,
-		AssignedBy: assignment.AssignedBy,
-		AssignedAt: assignment.AssignedAt,
-		State:      assignment.State,
-	}
-	r.assignments[a.ID] = a
-	r.assignmentsByItem[a.ItemID] = append(r.assignmentsByItem[a.ItemID], a)
-	r.assignmentsByChild[a.ChildID] = append(r.assignmentsByChild[a.ChildID], a)
-	return nil
-}
-
-// GetAssignmentsByItemID retrieves all assignments for an item
-func (r *InMemoryItemRepository) GetAssignmentsByItemID(ctx context.Context, itemID uuid.UUID) ([]*models.Assignment, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	assignments := r.assignmentsByItem[itemID]
-	result := make([]*models.Assignment, len(assignments))
-	for i, a := range assignments {
-		result[i] = &models.Assignment{
-			ID:         a.ID,
-			ItemID:     a.ItemID,
-			ChildID:    a.ChildID,
-			AssignedBy: a.AssignedBy,
-			AssignedAt: a.AssignedAt,
-			State:      a.State,
-		}
-	}
-	return result, nil
-}
-
-// GetAssignmentsByChildID retrieves all assignments for a child
-func (r *InMemoryItemRepository) GetAssignmentsByChildID(ctx context.Context, childID uuid.UUID) ([]*models.Assignment, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	assignments := r.assignmentsByChild[childID]
-	result := make([]*models.Assignment, len(assignments))
-	for i, a := range assignments {
-		result[i] = &models.Assignment{
-			ID:         a.ID,
-			ItemID:     a.ItemID,
-			ChildID:    a.ChildID,
-			AssignedBy: a.AssignedBy,
-			AssignedAt: a.AssignedAt,
-			State:      a.State,
-		}
-	}
-	return result, nil
-}
-
-// UpdateAssignmentState updates the state of an assignment
-func (r *InMemoryItemRepository) UpdateAssignmentState(ctx context.Context, id uuid.UUID, state string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	assignment, ok := r.assignments[id]
-	if !ok {
-		return nil
-	}
-
-	assignment.State = state
 	return nil
 }

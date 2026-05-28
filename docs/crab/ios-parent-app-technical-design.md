@@ -34,19 +34,25 @@
 ├────────────────────────┼────────────────────────────────────┤
 │ • 首次启动创建家庭     │ • 接收系统分享的链接              │
 │ • 显示配对码           │ • 解析 URL 和标题                 │
-│ • 孩子列表管理         │ • 展示最小预览                    │
-│ • 设置（时长限制）     │ • 选择目标孩子                    │
-│                        │ • 调用后端 API 发送               │
+│ • 孩子列表管理         │ • 显示预览                        │
+│ • 设置（时长限制）     │ • 一键发送到家庭                  │
 ├────────────────────────┴────────────────────────────────────┤
 │                    App Groups (共享容器)                     │
 │  • UserDefaults: JWT Token, Family ID                       │
-│  • Keychain: 敏感数据 (可选)                                 │
 ├─────────────────────────────────────────────────────────────┤
 │                       Go Backend API                         │
-│  POST /api/family/create    POST /api/items/import          │
-│  POST /api/family/pair      POST /api/items/:id/assign      │
-│  GET  /api/children                                       │
+│  POST /api/family/create                                    │
+│  POST /api/family/pair                                      │
+│  POST /api/items/import  ← 唯一需要的分享接口               │
 └─────────────────────────────────────────────────────────────┘
+
+数据模型:
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│  Item   │────▶│ Family  │◀────│  Child  │
+└─────────┘     └─────────┘     └─────────┘
+   内容           家庭             孩子
+
+Item 关联 Family，家庭内所有孩子自动可见，无需显式分配。
 ```
 
 ## 3. Share Extension 实现细节
@@ -341,12 +347,20 @@ ParentApp/
 打开 App → 自动创建家庭 → 获取 JWT Token → 显示配对码 → 等待孩子配对
 ```
 
-### 7.2 分享内容
+### 7.2 分享内容 (极简流程)
+
+**设计原则**: 分享给家庭，家庭中所有孩子可见。无需选择具体孩子。
 
 ```
 外部 App (抖音/Safari/X) → 分享按钮 → 系统分享面板 → 选择 Crab
-→ Extension 打开 → 解析链接 → 预览 → 选择孩子 → 发送 → 完成
+→ Extension 打开 → 解析链接 → 显示预览 → 点击发送 → 完成
 ```
+
+**流程简化**:
+- 从分享到完成，固定 2 步操作
+- 无需查询孩子列表
+- 无需选择界面
+- 发送给家庭 = 家庭中所有孩子可见
 
 ## 8. 实施计划
 
@@ -364,9 +378,50 @@ ParentApp/
 |-----|------|------|
 | `POST /api/family/create` | ✅ 已实现 | 创建家庭 |
 | `POST /api/family/pair` | ✅ 已实现 | 孩子配对 |
-| `GET /api/children` | ✅ 已实现 | 获取孩子列表 |
-| `POST /api/items/import` | ❌ 待实现 | 导入内容 |
-| `POST /api/items/:id/assign` | ❌ 待实现 | 分配给孩子 |
+| `POST /api/items/import` | ✅ 已实现 | 导入内容到家庭 |
+
+### 9.1 数据模型调整
+
+**原设计**: Item → Assignment → Child (需要显式分配)
+
+**新设计**: Item 直接关联 Family，家庭中所有孩子可见
+
+```
+Item
+├── id
+├── familyId     # 直接关联家庭
+├── sourceUrl
+├── ...
+└── (无需 Assignment 表)
+```
+
+**孩子端获取内容**: 查询 `items WHERE familyId = 当前孩子的 familyId`
+
+### 9.2 API 简化
+
+只需要一个 API 完成分享：
+
+```
+POST /api/items/import
+```
+
+**请求**:
+```json
+{
+  "sourceUrl": "https://www.douyin.com/video/123"
+}
+```
+
+**响应**:
+```json
+{
+  "id": "item-uuid",
+  "processingStatus": "pending",
+  "isDuplicate": false
+}
+```
+
+内容自动对家庭内所有孩子可见，无需额外分配步骤。
 
 ## 10. 参考资料
 

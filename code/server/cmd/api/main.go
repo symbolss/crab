@@ -45,7 +45,7 @@ func main() {
 
 	// Initialize handlers
 	familyHandler := handlers.NewFamilyHandler(familySvc)
-	contentHandler := handlers.NewContentHandler(contentSvc, familySvc)
+	contentHandler := handlers.NewContentHandler(contentSvc)
 
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(familySvc)
@@ -76,7 +76,6 @@ func main() {
 		r.Use(authMiddleware.RequireAuth)
 		r.Get("/api/children", familyHandler.GetChildren)
 		r.Post("/api/items/import", contentHandler.ImportItem)
-		r.Post("/api/items/{id}/assign", contentHandler.AssignItem)
 	})
 
 	// Start server
