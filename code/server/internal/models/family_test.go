@@ -9,14 +9,14 @@ func TestCreateFamilyRequest_Validate(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "valid request",
+			name:    "valid request with parent name",
 			request: CreateFamilyRequest{ParentName: "John Doe"},
 			wantErr: nil,
 		},
 		{
-			name:    "empty parent name",
+			name:    "valid request without parent name",
 			request: CreateFamilyRequest{ParentName: ""},
-			wantErr: ErrParentNameRequired,
+			wantErr: nil,
 		},
 		{
 			name:    "parent name too long",

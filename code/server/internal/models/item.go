@@ -90,15 +90,19 @@ func (r *ImportItemRequest) Validate() error {
 
 // PlayEvent represents a play event from the child app
 type PlayEvent struct {
+	ID          uuid.UUID `json:"id"`
 	ItemID      uuid.UUID `json:"itemId"`
 	EventType   string    `json:"eventType"`
 	PositionSec int       `json:"positionSec"`
 	OccurredAt  time.Time `json:"occurredAt"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // DailyUsage represents daily usage data for a child
 type DailyUsage struct {
+	ID           uuid.UUID `json:"id"`
 	ChildID      uuid.UUID `json:"childId"`
 	Date         time.Time `json:"date"`         // Date only (YYYY-MM-DD)
 	TotalPlaySec int       `json:"totalPlaySec"` // Total play time in seconds
+	UpdatedAt    time.Time `json:"updatedAt"`
 }

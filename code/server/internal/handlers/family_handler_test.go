@@ -110,8 +110,9 @@ func TestCreateFamilyHandler_EmptyParentName(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	// Empty parent name is now allowed (optional field)
+	if w.Code != http.StatusCreated {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusCreated)
 	}
 }
 

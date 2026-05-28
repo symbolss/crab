@@ -156,16 +156,21 @@ func (h *ContentHandler) GetItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get item
-	item, err := h.contentService.GetItemByID(r.Context(), itemID, familyUUID)
+	item, err := h.contentService.GetItemByID(r.Context(), itemID)
 	if err != nil {
 		switch err {
 		case models.ErrItemNotFound:
 			response.Error(w, http.StatusNotFound, "NOT_FOUND", "item not found")
-		case models.ErrUnauthorized:
-			response.Error(w, http.StatusForbidden, "FORBIDDEN", "access denied")
 		default:
 			response.Error(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get item")
+			return
 		}
+		return
+	}
+
+	// Verify item belongs to family
+	if item.FamilyID != familyUUID {
+		response.Error(w, http.StatusForbidden, "FORBIDDEN", "access denied")
 		return
 	}
 
@@ -196,16 +201,22 @@ func (h *ContentHandler) GetPlayback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get playback config
-	config, err := h.contentService.GetPlaybackConfig(r.Context(), itemID, familyUUID)
+	config, err := h.contentService.GetPlaybackConfig(r.Context(), itemID)
 	if err != nil {
 		switch err {
 		case models.ErrItemNotFound:
 			response.Error(w, http.StatusNotFound, "NOT_FOUND", "item not found")
-		case models.ErrUnauthorized:
-			response.Error(w, http.StatusForbidden, "FORBIDDEN", "access denied")
 		default:
 			response.Error(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get playback config")
+			return
 		}
+		return
+	}
+
+	// Verify item belongs to family (we need to get the item to check)
+	item, _ := h.contentService.GetItemByID(r.Context(), itemID)
+	if item != nil && item.FamilyID != familyUUID {
+		response.Error(w, http.StatusForbidden, "FORBIDDEN", "access denied")
 		return
 	}
 

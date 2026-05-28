@@ -172,3 +172,33 @@ func (s *ContentService) ImportItem(ctx context.Context, familyID uuid.UUID, req
 func (s *ContentService) GetItemsByFamily(ctx context.Context, familyID uuid.UUID) ([]*models.Item, error) {
 	return s.itemRepo.GetItemsByFamilyID(ctx, familyID)
 }
+
+// GetItemByID retrieves an item by ID
+func (s *ContentService) GetItemByID(ctx context.Context, itemID uuid.UUID) (*models.Item, error) {
+	return s.itemRepo.GetItemByID(ctx, itemID)
+}
+
+// PlaybackConfig represents the playback configuration for an item
+type PlaybackConfig struct {
+	ItemID         uuid.UUID `json:"itemId"`
+	PlaybackMode   string    `json:"playbackMode"`
+	URL            string    `json:"url"`
+	UsageRemaining int       `json:"usageRemainingSec"`
+}
+
+// GetPlaybackConfig returns playback configuration for an item
+func (s *ContentService) GetPlaybackConfig(ctx context.Context, itemID uuid.UUID) (*PlaybackConfig, error) {
+	item, err := s.itemRepo.GetItemByID(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		return nil, models.ErrItemNotFound
+	}
+
+	return &PlaybackConfig{
+		ItemID:       item.ID,
+		PlaybackMode: string(item.PlaybackMode),
+		URL:          item.SourceURL,
+	}, nil
+}

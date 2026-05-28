@@ -12,9 +12,11 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/family/crab-server/internal/config"
+	"github.com/family/crab-server/internal/database"
 	"github.com/family/crab-server/internal/handlers"
 	"github.com/family/crab-server/internal/middleware"
 	memrepo "github.com/family/crab-server/internal/repository/memory"
+	postgresrepo "github.com/family/crab-server/internal/repository/postgres"
 	"github.com/family/crab-server/internal/services"
 	"github.com/family/crab-server/pkg/response"
 )
@@ -29,19 +31,47 @@ func main() {
 		if cfg.IsProduction() {
 			log.Fatal("JWT_SECRET must be set in production")
 		}
-		// Generate random secret for development mode
 		jwtSecret = generateRandomSecret()
 		log.Println("WARNING: Using auto-generated JWT secret in development mode. Set JWT_SECRET for production.")
 	}
 
-	// Initialize repositories (using in-memory for now)
-	familyRepo := memrepo.NewInMemoryFamilyRepository()
-	childRepo := memrepo.NewInMemoryChildRepository()
-	itemRepo := memrepo.NewInMemoryItemRepository()
+	// Connect to database
+	dbURL := os.Getenv("DATABASE_URL")
+	var familySvc *services.FamilyService
+	var contentSvc *services.ContentService
 
-	// Initialize services
-	familySvc := services.NewFamilyService(familyRepo, childRepo, jwtSecret)
-	contentSvc := services.NewContentService(familyRepo, itemRepo)
+	if dbURL != "" {
+		// Use PostgreSQL
+		db, err := database.Connect(database.Config{
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     5432,
+			User:     getEnv("DB_USER", "postgres"),
+			Password: getEnv("DB_PASSWORD", "postgres"),
+			Database: getEnv("DB_NAME", "crab"),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		})
+		if err != nil {
+			log.Fatalf("Failed to connect to database: %v", err)
+		}
+		log.Println("Connected to PostgreSQL database")
+
+		familyRepo := postgresrepo.NewFamilyRepository(db)
+		childRepo := postgresrepo.NewChildRepository(db)
+		itemRepo := postgresrepo.NewItemRepository(db)
+
+		familySvc = services.NewFamilyService(familyRepo, childRepo, jwtSecret)
+		contentSvc = services.NewContentService(familyRepo, itemRepo)
+	} else {
+		// Use in-memory storage (for development/testing)
+		log.Println("WARNING: Using in-memory storage. Set DATABASE_URL for production.")
+
+		familyRepo := memrepo.NewInMemoryFamilyRepository()
+		childRepo := memrepo.NewInMemoryChildRepository()
+		itemRepo := memrepo.NewInMemoryItemRepository()
+
+		familySvc = services.NewFamilyService(familyRepo, childRepo, jwtSecret)
+		contentSvc = services.NewContentService(familyRepo, itemRepo)
+	}
 
 	// Initialize handlers
 	familyHandler := handlers.NewFamilyHandler(familySvc)
@@ -101,4 +131,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, map[string]string{
 		"status": "ok",
 	})
+}
+
+// getEnv gets an environment variable or returns the default value
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }

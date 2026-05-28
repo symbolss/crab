@@ -133,6 +133,11 @@ func (r *InMemoryChildRepository) CreateChild(ctx context.Context, child *models
 
 // GetChildByID retrieves a child by ID
 func (r *InMemoryChildRepository) GetChildByID(ctx context.Context, id uuid.UUID) (*models.Child, error) {
+	return r.GetByID(ctx, id)
+}
+
+// GetByID retrieves a child by ID
+func (r *InMemoryChildRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Child, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
